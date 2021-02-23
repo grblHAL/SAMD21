@@ -1,0 +1,18 @@
+[submodule "src/grbl"]
+	path = src/grbl
+	url = https://github.com/grblHAL/core
+[submodule "src/keypad"]
+	path = src/keypad
+	url = https://github.com/grblHAL/Plugin_I2C_keypad
+[submodule "src/motors"]
+	path = src/motors
+	url = https://github.com/grblHAL/Plugins_motor
+[submodule "src/trinamic"]
+	path = src/trinamic
+	url = https://github.com/terjeio/Trinamic-library
+[submodule "src/sdcard"]
+	path = src/sdcard
+	url = https://github.com/grblHAL/Plugin_SD_card
+[submodule "src/eeprom"]
+	path = src/eeprom
+	url = https://github.com/grblHAL/Plugin_EEPROM
