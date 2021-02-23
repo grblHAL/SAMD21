@@ -1,0 +1,15 @@
+[submodule "grblHAL_MKRZERO/src/grbl"]
+	path = grblHAL_MKRZERO/src/grbl
+	url = https://github.com/grblHAL/core
+[submodule "grblHAL_MKRZERO/src/sdcard"]
+	path = grblHAL_MKRZERO/src/sdcard
+	url = https://github.com/grblHAL/Plugin_SD_card
+[submodule "grblHAL_MKRZERO/src/motors"]
+	path = grblHAL_MKRZERO/src/motors
+	url = https://github.com/grblHAL/Plugins_motor
+[submodule "grblHAL_MKRZERO/src/trinamic"]
+	path = grblHAL_MKRZERO/src/trinamic
+	url = https://github.com/terjeio/Trinamic-library
+[submodule "grblHAL_MKRZERO/src/eeprom"]
+	path = grblHAL_MKRZERO/src/eeprom
+	url = https://github.com/grblHAL/Plugin_EEPROM
