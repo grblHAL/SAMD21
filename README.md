@@ -5,7 +5,7 @@ See issue #224 for more information. Also note that I am __*not*__ going to make
 
 A GrblHAL driver for the Atmel SAMD21 processor on a [Arduino MKR ZERO board](https://store.arduino.cc/arduino-mkrzero).
 
-See the Wiki-page for [compiling grblHAL](https://github.com/terjeio/grblHAL/wiki/Compiling-GrblHAL) for instructions for how to import the project, configure the driver and compile.
+See the Wiki-page for [compiling grblHAL](https://github.com/grblHAL/core/wiki/Compiling-GrblHAL) for instructions for how to import the project, configure the driver and compile.
 
 Available driver options can be found [here](main/my_machine.h).
 
@@ -69,4 +69,4 @@ Numbers in round brackets are the Arduino pin assignments, in square brackets th
 **NOTE:** Only tested on my bench with an oscilloscope, some switches and LEDs.
 
 ---
-2021-02-07
+2021-04-14
