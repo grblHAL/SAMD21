@@ -32,36 +32,7 @@
 #include "my_machine.h"
 #endif
 
-#ifndef USB_SERIAL_CDC
-#define USB_SERIAL_CDC      0 // for UART comms
-#endif
-#ifndef USB_SERIAL_WAIT
-#define USB_SERIAL_WAIT     0
-#endif
-#ifndef IOEXPAND_ENABLE
-#define IOEXPAND_ENABLE     0
-#endif
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE       0
-#endif
-#ifndef KEYPAD_ENABLE
-#define KEYPAD_ENABLE       0
-#endif
-#ifndef EEPROM_ENABLE
-#define EEPROM_ENABLE       0
-#endif
-#ifndef EEPROM_IS_FRAM
-#define EEPROM_IS_FRAM      0
-#endif
-#ifndef TRINAMIC_ENABLE
-#define TRINAMIC_ENABLE     0
-#endif
-#ifndef TRINAMIC_I2C
-#define TRINAMIC_I2C        0
-#endif
-#ifndef TRINAMIC_DEV
-#define TRINAMIC_DEV        0
-#endif
+#include "grbl/driver_opts.h"
 
 // clock definitions
 
