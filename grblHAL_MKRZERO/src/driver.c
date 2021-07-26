@@ -961,7 +961,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "210626";
+    hal.driver_version = "210716";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1000,25 +1000,9 @@ bool driver_init (void) {
     hal.control.get_state = systemGetState;
 
 #if USB_SERIAL_CDC
-    usb_serialInit();
-    hal.stream.read = usb_serialGetC;
-    hal.stream.get_rx_buffer_free = usb_serialRxFree;
-    hal.stream.reset_read_buffer = usb_serialRxFlush;
-    hal.stream.cancel_read_buffer = usb_serialRxCancel;
-    hal.stream.write = usb_serialWriteS;
-    hal.stream.write_all = usb_serialWriteS;
-    hal.stream.write_char = usb_serialPutC;
-    hal.stream.suspend_read = usb_serialSuspendInput;
+    memcpy(&hal.stream, usbInit(), sizeof(io_stream_t));
 #else
-    serialInit();
-    hal.stream.read = serialGetC;
-    hal.stream.get_rx_buffer_free = serialRxFree;
-    hal.stream.reset_read_buffer = serialRxFlush;
-    hal.stream.cancel_read_buffer = serialRxCancel;
-    hal.stream.write = serialWriteS;
-    hal.stream.write_all = serialWriteS;
-    hal.stream.write_char = serialPutC;
-    hal.stream.suspend_read = serialSuspendInput;
+    memcpy(&hal.stream, serialInit(), sizeof(io_stream_t));
 #endif
 
 #if I2C_ENABLE

@@ -39,6 +39,8 @@
 
 #include "driver.h"
 #include "serial.h"
+#include "grbl/hal.h"
+#include "grbl/protocol.h"
 
 typedef enum
 {
@@ -74,8 +76,9 @@ typedef enum
 } SercomDataOrder;
 
 static Sercom *sercom = SERCOM5;
-static stream_rx_buffer_t rxbuffer = {0};
-static stream_rx_buffer_t txbuffer = {0};
+static stream_rx_buffer_t rxbuf = {0};
+static stream_rx_buffer_t txbuf = {0};
+static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
 
 static void SERIAL_IRQHandler (void);
 
@@ -140,8 +143,169 @@ void initSerClockNVIC (Sercom *sercom)
   }
 }
 
-void serialInit (void)
+//
+// Returns number of characters in serial output buffer
+//
+static uint16_t serialTxCount (void)
 {
+    uint16_t tail = txbuf.tail;
+
+    return BUFCOUNT(txbuf.head, tail, TX_BUFFER_SIZE);
+}
+
+//
+// Returns number of characters in serial input buffer
+//
+static uint16_t serialRxCount (void)
+{
+    uint16_t tail = rxbuf.tail, head = rxbuf.head;
+
+    return BUFCOUNT(head, tail, RX_BUFFER_SIZE);
+}
+
+//
+// Returns number of free characters in serial input buffer
+//
+static uint16_t serialRxFree (void)
+{
+    unsigned int tail = rxbuf.tail, head = rxbuf.head;
+
+    return (RX_BUFFER_SIZE - 1) - BUFCOUNT(head, tail, RX_BUFFER_SIZE);
+}
+
+//
+// Flushes the serial input buffer
+//
+static void serialRxFlush (void)
+{
+    rxbuf.head = rxbuf.tail = 0;
+}
+
+//
+// Flushes and adds a CAN character to the serial input buffer
+//
+static void serialRxCancel (void)
+{
+    rxbuf.data[rxbuf.head] = ASCII_CAN;
+    rxbuf.tail = rxbuf.head;
+    rxbuf.head = BUFNEXT(rxbuf.head, rxbuf);
+}
+
+//
+// Attempt to send a character bypassing buffering
+//
+static inline bool serialPutCNonBlocking (const char c)
+{
+    bool ok;
+
+    if((ok = sercom->USART.INTFLAG.bit.DRE))
+        sercom->USART.DATA.reg = c;
+
+    return ok;
+}
+
+//
+// Writes a character to the serial output stream
+//
+static bool serialPutC (const char c)
+{
+    if(txbuf.head != txbuf.tail || !serialPutCNonBlocking(c)) { // Try to send character without buffering...
+
+        uint16_t next_head = BUFNEXT(txbuf.head, txbuf);        // .. if not, get pointer to next free slot in buffer
+
+        while(txbuf.tail == next_head) {                        // While TX buffer full
+      //      SERIAL_MODULE->IE |= EUSCI_A_IE_TXIE;             // Enable TX interrupts???
+            if(!hal.stream_blocking_callback())                 // check if blocking for space,
+                return false;                                   // exit if not (leaves TX buffer in an inconsistent state)
+        }
+
+        txbuf.data[txbuf.head] = c;                             // Add data to buffer
+        txbuf.head = next_head;                                 // and update head pointer
+
+        sercom->USART.INTENSET.reg = SERCOM_USART_INTENSET_DRE; // Enable TX interrupts
+    }
+
+    return true;
+}
+
+//
+// Writes a null terminated string to the serial output stream, blocks if buffer full
+//
+static void serialWriteS (const char *s)
+{
+    char c, *ptr = (char *)s;
+
+    while((c = *ptr++) != '\0')
+        serialPutC(c);
+}
+
+//
+// Writes a null terminated string to the serial output stream followed by EOL, blocks if buffer full
+//
+static void serialWriteLn (const char *s)
+{
+    serialWriteS(s);
+    serialWriteS(ASCII_EOL);
+}
+
+//
+// Writes a number of characters from string to the serial output stream followed by EOL, blocks if buffer full
+//
+static void serialWrite (const char *s, uint16_t length)
+{
+    char *ptr = (char *)s;
+
+    while(length--)
+        serialPutC(*ptr++);
+}
+
+//
+// serialGetC - returns -1 if no data available
+//
+static int16_t serialGetC (void)
+{
+    uint_fast16_t tail = rxbuf.tail;    // Get buffer pointer
+
+    if(tail == rxbuf.head)
+        return -1; // no data available
+
+    char data = rxbuf.data[tail];       // Get next character
+    rxbuf.tail = BUFNEXT(tail, rxbuf);  // and update pointer
+
+    return (int16_t)data;
+}
+
+static bool serialSuspendInput (bool suspend)
+{
+    return stream_rx_suspend(&rxbuf, suspend);
+}
+
+static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command_ptr handler)
+{
+    enqueue_realtime_command_ptr prev = enqueue_realtime_command;
+
+    if(handler)
+        enqueue_realtime_command = handler;
+
+    return prev;
+}
+
+const io_stream_t *serialInit (void)
+{
+    static const io_stream_t stream = {
+        .type = StreamType_Serial,
+        .connected = true,
+        .read = serialGetC,
+        .write = serialWriteS,
+        .write_char = serialPutC,
+        .write_all = serialWriteS,
+        .get_rx_buffer_free = serialRxFree,
+        .reset_read_buffer = serialRxFlush,
+        .cancel_read_buffer = serialRxCancel,
+        .suspend_read = serialSuspendInput,
+        .set_enqueue_rt_handler = serialSetRtHandler
+    };
+
     pinPeripheral(PIN_SERIAL1_RX, g_APinDescription[PIN_SERIAL1_RX].ulPinType);
     pinPeripheral(PIN_SERIAL1_TX, g_APinDescription[PIN_SERIAL1_TX].ulPinType);
 
@@ -173,7 +337,6 @@ void serialInit (void)
     sercom->USART.BAUD.FRAC.FP   = (baudTimes8 % 8);
     sercom->USART.BAUD.FRAC.BAUD = (baudTimes8 / 8);
 
-
     //
 
     //Setting the CTRLA register
@@ -199,151 +362,17 @@ void serialInit (void)
     NVIC_SetPriority(SERCOM5_IRQn, 1);
 
     //  __enable_interrupts();
+
+    return &stream;
 }
 
-//
-// Returns number of characters in serial output buffer
-//
-uint16_t serialTxCount (void)
-{
-  uint16_t tail = txbuffer.tail;
-  return BUFCOUNT(txbuffer.head, tail, TX_BUFFER_SIZE);
-}
-
-//
-// Returns number of characters in serial input buffer
-//
-uint16_t serialRxCount (void)
-{
-  uint16_t tail = rxbuffer.tail, head = rxbuffer.head;
-  return BUFCOUNT(head, tail, RX_BUFFER_SIZE);
-}
-
-//
-// Returns number of free characters in serial input buffer
-//
-uint16_t serialRxFree (void)
-{
-  unsigned int tail = rxbuffer.tail, head = rxbuffer.head;
-  return (RX_BUFFER_SIZE - 1) - BUFCOUNT(head, tail, RX_BUFFER_SIZE);
-}
-
-//
-// Flushes the serial input buffer
-//
-void serialRxFlush (void)
-{
-    rxbuffer.head = rxbuffer.tail = 0;
-}
-
-//
-// Flushes and adds a CAN character to the serial input buffer
-//
-void serialRxCancel (void)
-{
-    rxbuffer.data[rxbuffer.head] = ASCII_CAN;
-    rxbuffer.tail = rxbuffer.head;
-    rxbuffer.head = (rxbuffer.tail + 1) & (RX_BUFFER_SIZE - 1);
-}
-
-//
-// Attempt to send a character bypassing buffering
-//
-static inline bool serialPutCNonBlocking (const char c)
-{
-    bool ok;
-
-    if((ok = sercom->USART.INTFLAG.bit.DRE))
-        sercom->USART.DATA.reg = c;
-
-    return ok;
-}
-
-//
-// Writes a character to the serial output stream
-//
-bool serialPutC (const char c) {
-
-    uint32_t next_head;
-
-    if(txbuffer.head != txbuffer.tail || !serialPutCNonBlocking(c)) {   // Try to send character without buffering...
-
-        next_head = (txbuffer.head + 1) & (TX_BUFFER_SIZE - 1);         // .. if not, set and update head pointer
-
-        while(txbuffer.tail == next_head) {                             // While TX buffer full
-      //      SERIAL_MODULE->IE |= EUSCI_A_IE_TXIE;                     // Enable TX interrupts???
-            if(!hal.stream_blocking_callback())                         // check if blocking for space,
-                return false;                                           // exit if not (leaves TX buffer in an inconsistent state)
-        }
-
-        txbuffer.data[txbuffer.head] = c;                               // Add data to buffer
-        txbuffer.head = next_head;                                      // and update head pointer
-
-        sercom->USART.INTENSET.reg = SERCOM_USART_INTENSET_DRE;         // Enable TX interrupts
-    }
-
-    return true;
-}
-
-//
-// Writes a null terminated string to the serial output stream, blocks if buffer full
-//
-void serialWriteS (const char *s)
-{
-    char c, *ptr = (char *)s;
-
-    while((c = *ptr++) != '\0')
-        serialPutC(c);
-}
-
-//
-// Writes a null terminated string to the serial output stream followed by EOL, blocks if buffer full
-//
-void serialWriteLn (const char *s)
-{
-    serialWriteS(s);
-    serialWriteS(ASCII_EOL);
-}
-
-//
-// Writes a number of characters from string to the serial output stream followed by EOL, blocks if buffer full
-//
-void serialWrite (const char *s, uint16_t length)
-{
-    char *ptr = (char *)s;
-
-    while(length--)
-        serialPutC(*ptr++);
-}
-
-//
-// serialGetC - returns -1 if no data available
-//
-int16_t serialGetC (void)
-{
-    uint16_t bptr = rxbuffer.tail;
-
-    if(bptr == rxbuffer.head)
-        return -1; // no data available else EOF
-
-    char data = rxbuffer.data[bptr++];              // Get next character, increment tmp pointer
-    rxbuffer.tail = bptr & (RX_BUFFER_SIZE - 1);    // and update pointer
-
-    return (int16_t)data;
-}
-
-bool serialSuspendInput (bool suspend)
-{
-    return stream_rx_suspend(&rxbuffer, suspend);
-}
 
 //
 static void SERIAL_IRQHandler (void)
 {
     char data;
-    uint16_t bptr;
-    
-uint8_t ifg = sercom->USART.INTFLAG.reg;
+
+    uint8_t ifg = sercom->USART.INTFLAG.reg;
 
     if(sercom->USART.STATUS.bit.FERR) {
         data = sercom->USART.DATA.bit.DATA;
@@ -353,31 +382,25 @@ uint8_t ifg = sercom->USART.INTFLAG.reg;
 
     while(sercom->USART.INTFLAG.bit.RXC) {
         uint16_t sts = sercom->USART.STATUS.reg;
-        data =  sercom->USART.DATA.bit.DATA;
-        if(data == CMD_TOOL_ACK && !rxbuffer.backup) {
-            stream_rx_backup(&rxbuffer);
-            hal.stream.read = serialGetC; // restore normal input
-        } else if(!hal.stream.enqueue_realtime_command(data)) {
-
-            bptr = (rxbuffer.head + 1) & (RX_BUFFER_SIZE - 1);  // Get next head pointer
-
-            if(bptr == rxbuffer.tail)                           // If buffer full
-                rxbuffer.overflow = 1;                          // flag overflow,
+        data = sercom->USART.DATA.bit.DATA;
+        if(!enqueue_realtime_command(data)) {
+            uint16_t next_head = BUFNEXT(rxbuf.head, rxbuf);    // Get and increment buffer pointer
+            if(next_head == rxbuf.tail)                         // If buffer full
+                rxbuf.overflow = 1;                             // flag overflow,
             else {
-                rxbuffer.data[rxbuffer.head] = (char)data;      // else add data to buffer
-                rxbuffer.head = bptr;                           // and update pointer
+                rxbuf.data[rxbuf.head] = (char)data;            // else add data to buffer
+                rxbuf.head = next_head;                         // and update pointer
             }
         }           
     }
     
     if(sercom->USART.INTFLAG.bit.DRE) {
-        bptr = txbuffer.tail;                                           // Temp tail position (to avoid volatile overhead)
-        if(txbuffer.tail != txbuffer.head) {
-            sercom->USART.DATA.reg = (uint16_t)txbuffer.data[bptr++];   // Send a byte from the buffer
-            bptr &= (TX_BUFFER_SIZE - 1);                               // and update
-            txbuffer.tail = bptr;                                       // tail position
+        uint_fast16_t tail = txbuf.tail;                            // Get buffer pointer
+        if(tail != txbuf.head) {
+            sercom->USART.DATA.reg = (uint16_t)txbuf.data[tail];    // Send a byte from the buffer
+            txbuf.tail = tail = BUFNEXT(tail, txbuf);               // and increment pointer
         }
-        if (bptr == txbuffer.head)                                      // Turn off TX interrupt
-            sercom->USART.INTENCLR.reg = SERCOM_USART_INTENCLR_DRE;     // when buffer empty
+        if (tail == txbuf.head)                                     // Turn off TX interrupt
+            sercom->USART.INTENCLR.reg = SERCOM_USART_INTENCLR_DRE; // when buffer empty
     }
 }
