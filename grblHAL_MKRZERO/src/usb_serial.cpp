@@ -181,6 +181,11 @@ static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command
     return prev;
 }
 
+static bool usb_serialEnqueueRtCommand (char c)
+{
+    return enqueue_realtime_command(c);
+}
+
 static enqueue_realtime_command_ptr usbSetRtHandler (enqueue_realtime_command_ptr handler)
 {
     enqueue_realtime_command_ptr prev = enqueue_realtime_command;
@@ -200,6 +205,7 @@ const io_stream_t *usbInit (void)
         .write = usbWriteS,
         .write_all = usbWriteS,
         .write_char = usbPutC,
+        .enqueue_rt_command = usb_serialEnqueueRtCommand,
         .read = usbGetC,
         .reset_read_buffer = usbRxFlush,
         .cancel_read_buffer = usbRxCancel,
