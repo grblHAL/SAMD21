@@ -90,12 +90,78 @@ static bool usbPutC (const char c)
 }
 
 //
-// Writes a null terminated string to the serial output stream, blocks if buffer full.
-// Buffers locally up to 40 characters or until the string is terminated with a ASCII_LF character.
-// NOTE: grbl always sends ASCII_LF terminated strings!
+// Writes current buffer to the USB output stream, swaps buffers
+//
+static inline bool _usb_write (void)
+{
+    size_t length, txfree;
+
+    txbuf.s = txbuf.data;
+
+    while(txbuf.length) {
+
+        while(txbuf.length) {
+
+            if((txfree = SerialUSB.availableForWrite()) > 10) {
+
+                length = txfree < txbuf.length ? txfree : txbuf.length;
+
+                SerialUSB.write((uint8_t *)txbuf.s, length); // doc is wrong - does not return bytes sent!
+
+                txbuf.length -= length;
+                txbuf.s += length;
+            }
+
+            if(txbuf.length && !hal.stream_blocking_callback())
+                return false;
+        }
+    }
+
+    txbuf.length = 0;
+    txbuf.s = txbuf.data;
+
+    return true;
+}
+
+//
+// Writes a number of characters from string to the USB output stream, blocks if buffer full
+//
+static void usbWrite (const char *s, uint16_t length)
+{
+    if(length == 0)
+        return;
+
+    if(txbuf.length && (txbuf.length + length) > txbuf.max_length) {
+        if(!_usb_write())
+            return;
+    }
+
+    while(length > txbuf.max_length) {
+        txbuf.length = txbuf.max_length;
+        memcpy(txbuf.s, s, txbuf.length);
+        if(!_usb_write())
+            return;
+        length -= txbuf.max_length;
+        s += txbuf.max_length;
+    }
+
+    if(length) {
+        memcpy(txbuf.s, s, length);
+        txbuf.length += length;
+        txbuf.s += length;
+        _usb_write();
+    }
+}
+
+//
+// Writes a null terminated string to the USB output stream, blocks if buffer full
+// Buffers string up to EOL (LF) before transmitting
 //
 static void usbWriteS (const char *s)
 {
+    if(*s == '\0')
+        return;
+
     size_t length = strlen(s);
 
     if((length + txbuf.length) < BLOCK_TX_BUFFER_SIZE) {
@@ -105,49 +171,11 @@ static void usbWriteS (const char *s)
         txbuf.s += length;
 
         if(s[length - 1] == ASCII_LF || txbuf.length > txbuf.max_length) {
-
-            size_t avail;
-            txbuf.s = txbuf.data;
-
-            while(txbuf.length) {
-
-                if((avail = SerialUSB.availableForWrite()) > 10) {
-
-                    length = avail < txbuf.length ? avail : txbuf.length;
-
-                    SerialUSB.write((uint8_t *)txbuf.s, length); // doc is wrong - does not return bytes sent!
-
-                    txbuf.length -= length;
-                    txbuf.s += length;
-                }
-
-                if(txbuf.length && !hal.stream_blocking_callback())
-                    return;
-            }
-            txbuf.length = 0;
-            txbuf.s = txbuf.data;
+            if(!_usb_write())
+                return;
         }
-    }
-}
-
-//
-// Writes a null terminated string to the serial output stream followed by EOL, blocks if buffer full
-//
-static void usbWriteLn (const char *s)
-{
-    usbWriteS(s);
-    usbWriteS(ASCII_EOL);
-}
-
-//
-// Writes a number of characters from string to the serial output stream, blocks if buffer full
-//
-static void usbWrite (const char *s, uint16_t length)
-{
-    char *ptr = (char *)s;
-
-    while(length--)
-        usbPutC(*ptr++);
+    } else
+        usbWrite(s, (uint16_t)length);
 }
 
 //
@@ -210,7 +238,8 @@ const io_stream_t *usbInit (void)
         .reset_read_buffer = usbRxFlush,
         .cancel_read_buffer = usbRxCancel,
         .set_enqueue_rt_handler = usbSetRtHandler,
-        .suspend_read = usbSuspendInput
+        .suspend_read = usbSuspendInput,
+        .write_n = usbWrite
     };
 
     SerialUSB.begin(BAUD_RATE);

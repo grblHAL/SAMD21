@@ -961,7 +961,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "210908";
+    hal.driver_version = "210930";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
