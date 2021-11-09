@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2020 Terje Io
+  Copyright (c) 2018-2021 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ typedef struct {
     uint8_t addr;
     uint16_t count;
     uint8_t *data;
-#if KEYPAD_ENABLE
+#if KEYPAD_ENABLE == 1
     keycode_callback_ptr keycode_callback;
 #endif
     uint8_t buffer[8];
@@ -152,7 +152,7 @@ nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *transfer, bool read)
 
 #endif
 
-#if KEYPAD_ENABLE
+#if KEYPAD_ENABLE == 1
 
 void I2C_GetKeycode (uint32_t i2cAddr, keycode_callback_ptr callback)
 {
@@ -354,7 +354,7 @@ static void I2C_interrupt_handler (void)
             while(i2c_port->I2CM.SYNCBUSY.bit.SYSOP);
             i2c.count = 0;
             i2c.state = I2CState_Idle;
-          #if KEYPAD_ENABLE
+          #if KEYPAD_ENABLE == 1
             if(i2c.keycode_callback) {
                 //  if(GPIOIntStatus(KEYINTR_PORT, KEYINTR_PIN) != 0) { // only add keycode when key is still pressed
                 i2c.keycode_callback(*i2c.data);

@@ -47,7 +47,7 @@
 
 #if KEYPAD_ENABLE
 #include "keypad/keypad.h"
-void KEYPAD_IRQHandler (void);
+void I2C_Strobe_IRQHandler (void);
 #endif
 
 typedef struct {
@@ -97,6 +97,22 @@ static void DEBOUNCE_IRQHandler (void);
 static void SD_IRQHandler (void);
 
 extern void Dummy_Handler(void);
+
+#if I2C_STROBE_ENABLE
+
+static driver_irq_handler_t i2c_strobe = { .type = IRQ_I2C_Strobe };
+
+static bool irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr handler)
+{
+    bool ok;
+
+    if((ok = irq == IRQ_I2C_Strobe && i2c_strobe.callback == NULL))
+        i2c_strobe.callback = handler;
+
+    return ok;
+}
+
+#endif
 
 void IRQRegister(int32_t IRQnum, void (*IRQhandler)(void))
 {
@@ -642,9 +658,9 @@ void settings_changed (settings_t *settings)
         attachInterrupt(Y_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.y ? FALLING : RISING);
         attachInterrupt(Z_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.z ? FALLING : RISING);
 
-#if KEYPAD_ENABLE
-        pinMode(KEYPAD_PIN, INPUT_PULLUP);
-        attachInterrupt(KEYPAD_PIN, KEYPAD_IRQHandler, CHANGE);
+#if I2C_STROBE_ENABLE
+        pinMode(I2C_STROBE_PIN, INPUT_PULLUP);
+        attachInterrupt(I2C_STROBE_PIN, I2C_Strobe_IRQHandler, CHANGE);
 #endif
 
         // Bad code elsewhere requires this...
@@ -961,7 +977,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "210930";
+    hal.driver_version = "211107";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1022,6 +1038,9 @@ bool driver_init (void) {
 
     hal.irq_enable = __enable_irq;
     hal.irq_disable = __disable_irq;
+#if I2C_STROBE_ENABLE
+    hal.irq_claim = irq_claim;
+#endif
     hal.set_bits_atomic = bitsSetAtomic;
     hal.clear_bits_atomic = bitsClearAtomic;
     hal.set_value_atomic = valueSetAtomic;
@@ -1145,10 +1164,11 @@ static void SD_IRQHandler (void)
     while(DEBOUNCE_TIMER->SYNCBUSY.bit.CTRLB);
 }
 
-#if KEYPAD_ENABLE
-void KEYPAD_IRQHandler (void)
+#if I2C_STROBE_ENABLE
+void I2C_Strobe_IRQHandler (void)
 {
-    keypad_keyclick_handler(pinIn(KEYPAD_PIN) == 0);
+    if(i2c_strobe.callback)
+        i2c_strobe.callback(0, pinIn(I2C_STROBE_PIN) == 0);
 }
 #endif
 

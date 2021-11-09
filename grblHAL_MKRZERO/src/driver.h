@@ -74,8 +74,8 @@
 #include "trinamic/common.h"
 #endif
 
-#if KEYPAD_ENABLE
-#define KEYPAD_PIN (5u)
+#if I2C_STROBE_ENABLE
+#define I2C_STROBE_PIN (5u)
 #endif
 
 // Define SD card detect pin.
