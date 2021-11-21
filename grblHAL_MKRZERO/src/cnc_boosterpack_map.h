@@ -64,7 +64,7 @@
 #define RESET_PIN       (17u)
 #define FEED_HOLD_PIN   (9u)
 #define CYCLE_START_PIN (8u)
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#if SAFETY_DOOR_ENABLE
 #define SAFETY_DOOR_PIN (16u)
 #endif
 

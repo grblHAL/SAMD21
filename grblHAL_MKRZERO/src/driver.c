@@ -304,7 +304,7 @@ static control_signals_t systemGetState (void)
     signals.reset = pinIn(RESET_PIN);
     signals.feed_hold = pinIn(FEED_HOLD_PIN);
     signals.cycle_start = pinIn(CYCLE_START_PIN);
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifdef SAFETY_DOOR_PIN
     signals.safety_door_ajar = pinIn(SAFETY_DOOR_PIN);
 #endif
 
@@ -845,7 +845,7 @@ static bool driver_setup (settings_t *settings)
 
  // Set defaults
 
-    IOInitDone = settings->version == 19;
+    IOInitDone = settings->version == 21;
 
     hal.settings_changed(settings);
 
@@ -977,7 +977,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "211107";
+    hal.driver_version = "211121";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1055,7 +1055,7 @@ bool driver_init (void) {
 #endif
 
  // driver capabilities, used for announcing and negotiating (with Grbl) driver functionality
-#if defined(ENABLE_SAFETY_DOOR_INPUT_PIN) && defined(SAFETY_DOOR_PIN)
+#ifdef SAFETY_DOOR_PIN
     hal.signals_cap.safety_door_ajar = On;
 #endif
 
@@ -1083,7 +1083,7 @@ bool driver_init (void) {
 
     // No need to move version check before init.
     // Compiler will fail any signature mismatch for existing entries.
-    return hal.version == 8;
+    return hal.version == 9;
 }
 
 /* interrupt handlers */
