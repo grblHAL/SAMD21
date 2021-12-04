@@ -209,7 +209,7 @@ static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command
     return prev;
 }
 
-static bool usb_serialEnqueueRtCommand (char c)
+static bool usbEnqueueRtCommand (char c)
 {
     return enqueue_realtime_command(c);
 }
@@ -226,21 +226,21 @@ static enqueue_realtime_command_ptr usbSetRtHandler (enqueue_realtime_command_pt
 
 const io_stream_t *usbInit (void)
 {
-    static const io_stream_t stream = {
-        .type = StreamType_Serial,
-        .connected = false,
-        .get_rx_buffer_free = usbRxFree,
-        .write = usbWriteS,
-        .write_all = usbWriteS,
-        .write_char = usbPutC,
-        .enqueue_rt_command = usb_serialEnqueueRtCommand,
-        .read = usbGetC,
-        .reset_read_buffer = usbRxFlush,
-        .cancel_read_buffer = usbRxCancel,
-        .set_enqueue_rt_handler = usbSetRtHandler,
-        .suspend_read = usbSuspendInput,
-        .write_n = usbWrite
-    };
+    static io_stream_t stream;
+
+    stream.type = StreamType_Serial;
+    stream.instance = 0;
+    stream.get_rx_buffer_free = usbRxFree;
+    stream.write = usbWriteS;
+    stream.write_all = usbWriteS;
+    stream.write_char = usbPutC;
+    stream.enqueue_rt_command = usbEnqueueRtCommand;
+    stream.read = usbGetC;
+    stream.reset_read_buffer = usbRxFlush;
+    stream.cancel_read_buffer = usbRxCancel;
+    stream.set_enqueue_rt_handler = usbSetRtHandler;
+    stream.suspend_read = usbSuspendInput;
+    stream.write_n = usbWrite;
 
     SerialUSB.begin(BAUD_RATE);
 
