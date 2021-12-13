@@ -1016,9 +1016,9 @@ bool driver_init (void) {
     hal.control.get_state = systemGetState;
 
 #if USB_SERIAL_CDC
-    memcpy(&hal.stream, usbInit(), sizeof(io_stream_t));
+    stream_connect(usbInit());
 #else
-    memcpy(&hal.stream, serialInit(), sizeof(io_stream_t));
+    stream_connect(serialInit());
 #endif
 
 #if I2C_ENABLE
