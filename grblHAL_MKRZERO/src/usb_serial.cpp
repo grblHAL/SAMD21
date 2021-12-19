@@ -37,6 +37,7 @@ extern "C" {
 
 static stream_rx_buffer_t rxbuf;
 static stream_block_tx_buffer_t txbuf = {0};
+static on_execute_realtime_ptr on_execute_realtime = NULL;
 static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
 
 //
@@ -224,39 +225,6 @@ static enqueue_realtime_command_ptr usbSetRtHandler (enqueue_realtime_command_pt
     return prev;
 }
 
-const io_stream_t *usbInit (void)
-{
-    static const io_stream_t stream = {
-        .type = StreamType_Serial,
-        .instance = 0,
-        .state = { .is_usb = On },
-        .get_rx_buffer_free = usbRxFree,
-        .write = usbWriteS,
-        .write_all = NULL,
-        .write_char = usbPutC,
-        .enqueue_rt_command = usbEnqueueRtCommand,
-        .read = usbGetC,
-        .reset_read_buffer = usbRxFlush,
-        .cancel_read_buffer = usbRxCancel,
-        .set_enqueue_rt_handler = usbSetRtHandler,
-        .suspend_read = usbSuspendInput,
-        .write_n = usbWrite
-    };
-
-    SerialUSB.begin(BAUD_RATE);
-
-#if usb_WAIT
-//    while(!SerialUSB); // Hangs forever...
-#endif
-
-    txbuf.s = txbuf.data;
-    txbuf.max_length = SerialUSB.availableForWrite(); // 63 bytes
-    txbuf.max_length = (txbuf.max_length > BLOCK_TX_BUFFER_SIZE ? BLOCK_TX_BUFFER_SIZE : txbuf.max_length) - 20;
-
-    return &stream;
-}
-
-
 //
 // This function get called from the protocol_execute_realtime function,
 // used here to get characters off the USB serial input stream and buffer
@@ -291,6 +259,43 @@ void usb_execute_realtime (uint_fast16_t state)
             }
         }
     }
+}
+
+const io_stream_t *usbInit (void)
+{
+    static const io_stream_t stream = {
+        .type = StreamType_Serial,
+        .instance = 0,
+        .state = { .is_usb = On },
+        .get_rx_buffer_free = usbRxFree,
+        .write = usbWriteS,
+        .write_all = NULL,
+        .write_char = usbPutC,
+        .enqueue_rt_command = usbEnqueueRtCommand,
+        .read = usbGetC,
+        .reset_read_buffer = usbRxFlush,
+        .cancel_read_buffer = usbRxCancel,
+        .set_enqueue_rt_handler = usbSetRtHandler,
+        .suspend_read = usbSuspendInput,
+        .write_n = usbWrite
+    };
+
+    SerialUSB.begin(BAUD_RATE);
+
+#if usb_WAIT
+//    while(!SerialUSB); // Hangs forever...
+#endif
+
+    txbuf.s = txbuf.data;
+    txbuf.max_length = SerialUSB.availableForWrite(); // 63 bytes
+    txbuf.max_length = (txbuf.max_length > BLOCK_TX_BUFFER_SIZE ? BLOCK_TX_BUFFER_SIZE : txbuf.max_length) - 20;
+
+    if(on_execute_realtime == NULL) {
+        on_execute_realtime = grbl.on_execute_realtime;
+        grbl.on_execute_realtime = usb_execute_realtime;
+    }
+
+    return &stream;
 }
 
 #ifdef __cplusplus
