@@ -84,18 +84,17 @@
 void IRQRegister(int32_t IRQnum, void (*IRQhandler)(void));
 void IRQUnRegister(int32_t IRQnum);
 
-#if KEYPAD_ENABLE || IOEXPAND_ENABLE || EEPROM_ENABLE || (TRINAMIC_ENABLE && TRINAMIC_I2C)
-
+#if IOEXPAND_ENABLE
+#undef I2C_ENABLE
 #define I2C_ENABLE 1
+#endif
 
+#if I2C_ENABLE
 // Define I2C port/pins
 #define I2C_PORT SERCOM0
 #define I2C_SDA_PIN 11
 #define I2C_SCL_PIN 12
 #define I2C_CLOCK 100000
-
-#else
-#define I2C_ENABLE 0
 #endif
 
 #endif
