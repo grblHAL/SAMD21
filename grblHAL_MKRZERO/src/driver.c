@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -128,8 +128,10 @@ static void driver_delay_ms (uint32_t ms, void (*callback)(void))
 {
     if((delay_ms.ms = ms) > 0) {
         SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
-        if(!(delay_ms.callback = callback))
-            while(delay_ms.ms);
+        if(!(delay_ms.callback = callback)) {
+            while(delay_ms.ms)
+                grbl.on_execute_delay(state_get());
+        }
     } else if(callback)
         callback();
 }
@@ -968,7 +970,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "211213";
+    hal.driver_version = "220111";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
