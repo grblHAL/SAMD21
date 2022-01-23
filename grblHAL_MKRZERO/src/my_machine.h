@@ -28,6 +28,7 @@
 // Uncomment to enable.
 
 #define USB_SERIAL_CDC       1 // Comment out to use UART communication.
+//#define SAFETY_DOOR_ENABLE 1 // Enable safety door input.
 //#define IOEXPAND_ENABLE    1 // Use I2C IO expander for some output signals.
 //#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
 //#define TRINAMIC_ENABLE 2130 // Trinamic TMC2130 stepper driver support. NOTE: work in progress.
