@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020 Terje Io
+  Copyright (c) 2020-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -46,32 +46,36 @@
 #define IOEXPAND_ENABLE 1
 
 // Define step pulse output pins.
-#define X_STEP_PIN      (19u)
-#define Y_STEP_PIN      (20u)
-#define Z_STEP_PIN      (21u)
+#define X_STEP_PIN          (19u)
+#define Y_STEP_PIN          (20u)
+#define Z_STEP_PIN          (21u)
 
 // Define step direction output pins.
-#define X_DIRECTION_PIN (3u)
-#define Y_DIRECTION_PIN (15u)
-#define Z_DIRECTION_PIN (2u)
+#define X_DIRECTION_PIN     (3u)
+#define Y_DIRECTION_PIN     (15u)
+#define Z_DIRECTION_PIN     (2u)
 
 // Define homing/hard limit switch input pins.
-#define X_LIMIT_PIN     (7u)
-#define Y_LIMIT_PIN     (1u)
-#define Z_LIMIT_PIN     (0u)
+#define X_LIMIT_PIN         (7u)
+#define Y_LIMIT_PIN         (1u)
+#define Z_LIMIT_PIN         (0u)
 
 // Define user-control CONTROLs (cycle start, reset, feed hold) input pins.
-#define RESET_PIN       (17u)
-#define FEED_HOLD_PIN   (9u)
-#define CYCLE_START_PIN (8u)
+#define RESET_PIN           (17u)
+#define FEED_HOLD_PIN       (9u)
+#define CYCLE_START_PIN     (8u)
 #if SAFETY_DOOR_ENABLE
-#define SAFETY_DOOR_PIN (16u)
+#define SAFETY_DOOR_PIN     (16u)
 #endif
 
 // Start of PWM & Stepper Enabled Spindle
 #define SPINDLE_PWM_TIMER   TCC0
 #define SPINDLE_PWM_CCREG   2
 #define SPINDLEPWMPIN       (6u)
+
+// Define probe switch input pin.
+#define PROBE_PIN           (18u)
+
 
 #if IOEXPAND_ENABLE
 

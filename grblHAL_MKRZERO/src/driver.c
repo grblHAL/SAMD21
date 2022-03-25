@@ -27,6 +27,7 @@
 #include "serial.h"
 
 #include "grbl/limits.h"
+#include "grbl/state_machine.h"
 
 #if USB_SERIAL_CDC
 #include "usb_serial.h"
@@ -375,19 +376,14 @@ inline static void spindle_on (void)
 
 inline static void spindle_dir (bool ccw)
 {
-#ifdef SPINDLE_DIRECTION_PIN
 #if IOEXPAND_ENABLE
-    if(hal.driver_cap.spindle_dir) {
-        bool ccw = (ccw ^ settings.spindle.invert.ccw) ? On : Off;
-        if(iopins.spindle_dir != ccw) {
-            iopins.spindle_dir = ccw;
-            ioexpand_out(iopins);
-        }
+    ccw ^= settings.spindle.invert.ccw;
+    if(iopins.spindle_dir != ccw) {
+        iopins.spindle_dir = ccw;
+        ioexpand_out(iopins);
     }
-#else
-    if(hal.driver_cap.spindle_dir)
-        DIGITAL_OUT(spindleDir, (ccw ^ settings.spindle.invert.ccw));
-#endif
+#elif defined(SPINDLE_DIRECTION_PIN)
+    DIGITAL_OUT(spindleDir, (ccw ^ settings.spindle.invert.ccw));
 #endif
 }
 
@@ -432,21 +428,10 @@ static void spindle_set_speed (uint_fast16_t pwm_value)
     }
 }
 
-#ifdef SPINDLE_PWM_DIRECT
-
 static uint_fast16_t spindleGetPWM (float rpm)
 {
     return spindle_compute_pwm_value(&spindle_pwm, rpm, false);
 }
-
-#else
-
-static void spindleUpdateRPM (float rpm)
-{
-    spindle_set_speed(spindle_compute_pwm_value(&spindle_pwm, rpm, false));
-}
-
-#endif
 
 // Start or stop spindle
 static void spindleSetStateVariable (spindle_state_t state, float rpm)
@@ -467,11 +452,11 @@ static spindle_state_t spindleGetState (void)
 
 #if IOEXPAND_ENABLE // TODO: read from expander?
     state.on = iopins.spindle_on;
-    state.ccw = hal.driver_cap.spindle_dir && iopins.spindle_dir;
+    state.ccw = iopins.spindle_dir;
 #else
     state.on = pinIn(SPINDLE_ENABLE_PIN) != 0;
   #ifdef SPINDLE_DIRECTION_PIN
-    state.ccw = hal.driver_cap.spindle_dir && pinIn(SPINDLE_DIRECTION_PIN) != 0;
+    state.ccw = pinIn(SPINDLE_DIRECTION_PIN) != 0;
   #endif
 #endif
 
@@ -564,7 +549,7 @@ void settings_changed (settings_t *settings)
 {
     bool variable_spindle;
 
-    if((variable_spindle = (hal.driver_cap.variable_spindle && settings->spindle.rpm_min < settings->spindle.rpm_max))) {
+    if((variable_spindle = (hal.spindle.cap.variable && settings->spindle.rpm_min < settings->spindle.rpm_max))) {
 
         SPINDLE_PWM_TIMER->CTRLA.bit.ENABLE = 0;
         while(SPINDLE_PWM_TIMER->SYNCBUSY.bit.ENABLE);
@@ -970,7 +955,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "220111";
+    hal.driver_version = "220325";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -997,15 +982,16 @@ bool driver_init (void) {
     hal.probe.get_state = probeGetState;
 #endif
 
+#if IOEXPAND_ENABLE || defined(SPINDLE_DIRECTION_PIN)
+    hal.spindle.cap.direction = On;
+#endif
+    hal.spindle.cap.variable = On;
+    hal.spindle.cap.laser = On;
     hal.spindle.set_state = spindleSetState;
     hal.spindle.get_state = spindleGetState;
-#ifdef SPINDLE_PWM_DIRECT
     hal.spindle.get_pwm = spindleGetPWM;
     hal.spindle.update_pwm = spindle_set_speed;
-#else
-    hal.spindle.update_rpm = spindleUpdateRPM;
-#endif
-    
+
     hal.control.get_state = systemGetState;
 
 #if USB_SERIAL_CDC
@@ -1048,10 +1034,6 @@ bool driver_init (void) {
     hal.signals_cap.safety_door_ajar = On;
 #endif
 
-#ifdef SPINDLE_DIRECTION_PIN
-    hal.driver_cap.spindle_dir = On;
-#endif
-    hal.driver_cap.variable_spindle = On;
     hal.driver_cap.mist_control = On;
     hal.driver_cap.software_debounce = On;
     hal.driver_cap.step_pulse_delay = On;
