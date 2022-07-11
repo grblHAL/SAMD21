@@ -602,8 +602,6 @@ void settings_changed (settings_t *settings)
             spindleConfig();
 #endif
 
-        stepperEnable(settings->steppers.deenergize);
-
         int16_t t = (int16_t)(24.0f * (settings->steppers.pulse_microseconds - STEP_PULSE_LATENCY)) - 1;
         pulse_length = t < 2 ? 2 : t;
 
@@ -979,7 +977,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "220703";
+    hal.driver_version = "220710";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
