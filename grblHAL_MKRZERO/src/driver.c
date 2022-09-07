@@ -26,7 +26,7 @@
 #include "driver.h"
 #include "serial.h"
 
-#include "grbl/limits.h"
+#include "grbl/machine_limits.h"
 #include "grbl/state_machine.h"
 
 #if USB_SERIAL_CDC
@@ -977,7 +977,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "220710";
+    hal.driver_version = "220907";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
@@ -1088,7 +1088,7 @@ bool driver_init (void) {
 
     // No need to move version check before init.
     // Compiler will fail any signature mismatch for existing entries.
-    return hal.version == 9;
+    return hal.version == 10;
 }
 
 /* interrupt handlers */
