@@ -71,7 +71,7 @@
 // Start of PWM & Stepper Enabled Spindle
 #define SPINDLE_PWM_TIMER   TCC0
 #define SPINDLE_PWM_CCREG   2
-#define SPINDLEPWMPIN       (6u)
+#define SPINDLE_PWM_PIN       (6u)
 
 // Define probe switch input pin.
 #define PROBE_PIN           (18u)

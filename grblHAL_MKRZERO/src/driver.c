@@ -83,12 +83,13 @@ static axes_signals_t limit_ies; // declare here for now...
 
 #if (!VFD_SPINDLE || N_SPINDLE > 1) && (defined(SPINDLE_ENABLE_PIN) || IOEXPAND_ENABLE)
 
-#define PWM_SPINDLE
+#define DRIVER_SPINDLE
 
+#ifdef SPINDLE_PWM_PIN
 static bool pwmEnabled = false;
 static spindle_pwm_t spindle_pwm;
-
 static void spindle_set_speed (uint_fast16_t pwm_value);
+#endif
 
 #endif
 
@@ -354,7 +355,7 @@ probe_state_t probeGetState (void)
 
 #endif
 
-#ifdef PWM_SPINDLE
+#ifdef DRIVER_SPINDLE
 
 // Static spindle (off, on cw & on ccw)
 
@@ -410,6 +411,8 @@ static void spindleSetState (spindle_state_t state, float rpm)
 
 // Variable spindle control functions
 
+#ifdef SPINDLE_PWM_PIN
+
 // Sets spindle speed
 static void spindle_set_speed (uint_fast16_t pwm_value)
 {
@@ -460,28 +463,6 @@ static void spindleSetStateVariable (spindle_state_t state, float rpm)
     spindle_set_speed(state.on ? spindle_compute_pwm_value(&spindle_pwm, rpm, false) : spindle_pwm.off_value);
 }
 
-// Returns spindle state in a spindle_state_t variable
-static spindle_state_t spindleGetState (void)
-{
-    spindle_state_t state = {0};
-
-#if IOEXPAND_ENABLE // TODO: read from expander?
-    state.on = iopins.spindle_on;
-    state.ccw = iopins.spindle_dir;
-#else
-    state.on = pinIn(SPINDLE_ENABLE_PIN) != 0;
-  #ifdef SPINDLE_DIRECTION_PIN
-    state.ccw = pinIn(SPINDLE_DIRECTION_PIN) != 0;
-  #endif
-#endif
-
-    state.value ^= settings.spindle.invert.mask;
-    if(pwmEnabled)
-        state.on = On;
-
-    return state;
-}
-
 bool spindleConfig (void)
 {
     spindle_pwm.offset = 1;
@@ -515,7 +496,34 @@ bool spindleConfig (void)
     return true;
 }
 
-#endif // PWM_SPINDLE
+#endif // SPINDLE_PWM_PIN
+
+// Returns spindle state in a spindle_state_t variable
+static spindle_state_t spindleGetState (void)
+{
+    spindle_state_t state = {0};
+
+#if IOEXPAND_ENABLE // TODO: read from expander?
+    state.on = iopins.spindle_on;
+    state.ccw = iopins.spindle_dir;
+#else
+    state.on = pinIn(SPINDLE_ENABLE_PIN) != 0;
+  #ifdef SPINDLE_DIRECTION_PIN
+    state.ccw = pinIn(SPINDLE_DIRECTION_PIN) != 0;
+  #endif
+#endif
+
+    state.value ^= settings.spindle.invert.mask;
+
+#ifdef SPINDLE_PWM_PIN
+    if(pwmEnabled)
+        state.on = On;
+#endif
+
+    return state;
+}
+
+#endif // DRIVER_SPINDLE
 
 #ifdef DEBUGOUT
 void debug_out (bool on)
@@ -597,7 +605,7 @@ void settings_changed (settings_t *settings)
 {
     if(IOInitDone) {
 
-#ifdef PWM_SPINDLE
+#ifdef SPINDLE_PWM_PIN
         if(hal.spindle.get_state == spindleGetState)
             spindleConfig();
 #endif
@@ -822,13 +830,13 @@ static bool driver_setup (settings_t *settings)
     pinModeOutput(&spindleDir, SPINDLE_DIRECTION_PIN);
   #endif
 #endif
-    pinMode(SPINDLEPWMPIN, OUTPUT);
+    pinMode(SPINDLE_PWM_PIN, OUTPUT);
 
     GCLK->CLKCTRL.reg = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK7 | GCLK_CLKCTRL_ID_TCC0_TCC1); // 16 MHz
     while(GCLK->STATUS.bit.SYNCBUSY);
 
-    PORT->Group[g_APinDescription[SPINDLEPWMPIN].ulPort].PINCFG[g_APinDescription[SPINDLEPWMPIN].ulPin].bit.PMUXEN = 1;
-    PORT->Group[g_APinDescription[SPINDLEPWMPIN].ulPort].PMUX[g_APinDescription[SPINDLEPWMPIN].ulPin >> 1].reg = PORT_PMUX_PMUXE_F;
+    PORT->Group[g_APinDescription[SPINDLE_PWM_PIN].ulPort].PINCFG[g_APinDescription[SPINDLE_PWM_PIN].ulPin].bit.PMUXEN = 1;
+    PORT->Group[g_APinDescription[SPINDLE_PWM_PIN].ulPort].PMUX[g_APinDescription[SPINDLE_PWM_PIN].ulPin >> 1].reg = PORT_PMUX_PMUXE_F;
 
     SPINDLE_PWM_TIMER->CTRLA.bit.ENABLE = 0;
     while(SPINDLE_PWM_TIMER->SYNCBUSY.bit.ENABLE);
@@ -977,9 +985,13 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "220922";
+    hal.driver_version = "221014";
+    hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
+#endif
+#ifdef BOARD_URL
+    hal.board_url = BOARD_URL;
 #endif
     hal.driver_setup = driver_setup;
     hal.f_step_timer = SystemCoreClock / 3;
@@ -1006,27 +1018,34 @@ bool driver_init (void) {
 
     hal.control.get_state = systemGetState;
 
-#ifdef PWM_SPINDLE
+#ifdef DRIVER_SPINDLE
 
     static const spindle_ptrs_t spindle = {
- #if IOEXPAND_ENABLE || defined(SPINDLE_DIRECTION_PIN)
-        .cap.direction = On,
- #endif
- #ifdef SPINDLE_PWM_PIN
+  #ifdef SPINDLE_PWM_PIN
+        .type = SpindleType_PWM,
         .cap.laser = On,
         .cap.variable = On,
         .cap.pwm_invert = On,
+        .config = spindleConfig,
         .get_pwm = spindleGetPWM,
         .update_pwm = spindle_set_speed,
- #endif
-        .config = spindleConfig,
+  #else
+       .type = SpindleType_Basic,
+  #endif
+  #ifdef SPINDLE_DIRECTION_PIN
+       .cap.direction = On,
+  #endif
         .set_state = spindleSetState,
         .get_state = spindleGetState
     };
 
-    spindle_register(&spindle, "PWM");
+  #ifdef SPINDLE_PWM_TIMER_N
+   spindle_register(&spindle, "PWM");
+  #else
+   spindle_register(&spindle, "Basic");
+  #endif
 
-#endif // PWM_SPINDLE
+#endif // DRIVER_SPINDLE
 
 #if USB_SERIAL_CDC
     stream_connect(usbInit());
