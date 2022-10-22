@@ -605,7 +605,7 @@ void settings_changed (settings_t *settings)
 {
     if(IOInitDone) {
 
-#ifdef SPINDLE_PWM_PIN
+#if defined(DRIVER_SPINDLE) && defined(SPINDLE_PWM_PIN)
         if(hal.spindle.get_state == spindleGetState)
             spindleConfig();
 #endif
@@ -985,7 +985,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "221014";
+    hal.driver_version = "221022";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
