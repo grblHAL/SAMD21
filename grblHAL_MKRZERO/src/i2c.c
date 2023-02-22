@@ -66,9 +66,7 @@ typedef struct {
     uint8_t addr;
     uint16_t count;
     uint8_t *data;
-#if KEYPAD_ENABLE == 1
     keycode_callback_ptr keycode_callback;
-#endif
     uint8_t buffer[8];
 } i2c_trans_t;
 
@@ -95,7 +93,7 @@ uint8_t *I2C_Receive (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block
     return i2c.buffer;
 }
 
-void I2C_Send (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block)
+bool i2c_send (uint_fast16_t i2cAddr, uint8_t *buf, size_t bytes, bool block)
 {
 //    while(i2cIsBusy);
 
@@ -108,6 +106,8 @@ void I2C_Send (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block)
 
     if(block)
         while(i2cIsBusy);
+
+    return true;
 }
 
 uint8_t *I2C_ReadRegister (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block)
@@ -141,7 +141,7 @@ nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *transfer, bool read)
     } else {
         memcpy(&txbuf[1], transfer->data, transfer->count);
         txbuf[0] = transfer->word_addr;
-        I2C_Send(transfer->address, txbuf, transfer->count + 1, true);
+        i2c_send(transfer->address, txbuf, transfer->count + 1, true);
 #if !EEPROM_IS_FRAM
         hal.delay_ms(5, NULL);
 #endif
@@ -152,9 +152,7 @@ nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *transfer, bool read)
 
 #endif
 
-#if KEYPAD_ENABLE == 1
-
-void I2C_GetKeycode (uint32_t i2cAddr, keycode_callback_ptr callback)
+void i2c_get_keycode (uint_fast16_t i2cAddr, keycode_callback_ptr callback)
 {
     while(i2cIsBusy);
 
@@ -162,8 +160,6 @@ void I2C_GetKeycode (uint32_t i2cAddr, keycode_callback_ptr callback)
 
     I2C_Receive(i2cAddr, NULL, 1, false);
 }
-
-#endif
 
 #if TRINAMIC_ENABLE && TRINAMIC_I2C
 
@@ -176,7 +172,7 @@ TMC_spi_status_t tmc_spi_read (trinamic_motor_t driver, TMC_spi_datagram_t *data
 
     if(driver.axis != axis) {
         i2c.buffer[0] = driver.axis;
-        I2C_Send(I2C_ADR_I2CBRIDGE, NULL, 1, true);
+        i2c_send(I2C_ADR_I2CBRIDGE, NULL, 1, true);
 
         axis = driver.axis;
     }
@@ -209,7 +205,7 @@ TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *dat
 
     if(driver.axis != axis) {
         i2c.buffer[0] = driver.axis;
-        I2C_Send(I2C_ADR_I2CBRIDGE, NULL, 1, true);
+        i2c_send(I2C_ADR_I2CBRIDGE, NULL, 1, true);
 
         axis = driver.axis;
     }
@@ -222,7 +218,7 @@ TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *dat
     i2c.buffer[4] = datagram->payload.value & 0xFF;
     datagram->addr.write = Off;
 
-    I2C_Send(I2C_ADR_I2CBRIDGE, NULL, 5, true);
+    i2c_send(I2C_ADR_I2CBRIDGE, NULL, 5, true);
 
     return status;
 }

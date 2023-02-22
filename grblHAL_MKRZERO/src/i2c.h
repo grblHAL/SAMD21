@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,17 +27,11 @@
 #include "driver.h"
 #include "grbl/plugins.h"
 
-#if KEYPAD_ENABLE == 1
-
-#include "keypad/keypad.h"
-
-void I2C_GetKeycode (uint32_t i2cAddr, keycode_callback_ptr callback);
-
-#endif
-
 void i2c_init (void);
+bool i2c_send (uint_fast16_t i2cAddr, uint8_t *buf, size_t size, bool block);
+void i2c_get_keycode (uint_fast16_t i2cAddr, keycode_callback_ptr callback);
+
 uint8_t *I2C_Receive (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block);
-void I2C_Send (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block);
 uint8_t *I2C_ReadRegister (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block);
 
 #endif

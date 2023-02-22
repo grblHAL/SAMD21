@@ -6,7 +6,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2020 Terje Io
+  Copyright (c) 2018-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -56,11 +56,11 @@ void ioexpand_init (void)
 
     cmd[0] = RW_CONFIG;
     cmd[1] = cfg.mask;
-    I2C_Send(IOEX_ADDRESS, cmd, 2, true);
+    i2c_send(IOEX_ADDRESS, cmd, 2, true);
 
     cmd[0] = RW_INVERSION;
     cmd[1] = 0;
-    I2C_Send(IOEX_ADDRESS, cmd, 2, true);
+    i2c_send(IOEX_ADDRESS, cmd, 2, true);
 }
 
 void ioexpand_out (ioexpand_t pins)
@@ -70,7 +70,7 @@ void ioexpand_out (ioexpand_t pins)
     cmd[0] = RW_OUTPUT;
     cmd[1] = pins.mask;
 
-    I2C_Send(IOEX_ADDRESS, cmd, 2, true);
+    i2c_send(IOEX_ADDRESS, cmd, 2, true);
 }
 
 ioexpand_t ioexpand_in (void)
