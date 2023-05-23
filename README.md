@@ -3,7 +3,7 @@
 __IMPORTANT:__ Arduino version 1.8.11 has breaking changes in the library code that causes compilation to fail. Use an earlier version or select another driver for your project.  
 See [issue #224](https://github.com/terjeio/grblHAL/issues/224) for more information. Also note that I am __*not*__ going to make a workaround for this since the compilation error is in the shared grblHAL core code.
 
-A GrblHAL driver for the Atmel SAMD21 processor on a [Arduino MKR ZERO board](https://store.arduino.cc/arduino-mkrzero).
+A grblHAL driver for the Atmel SAMD21 processor on a [Arduino MKR ZERO board](https://store.arduino.cc/arduino-mkrzero).
 
 See the Wiki-page for [compiling grblHAL](https://github.com/grblHAL/core/wiki/Compiling-GrblHAL) for instructions for how to import the project, configure the driver and compile.
 
