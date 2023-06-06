@@ -183,6 +183,18 @@ static void stepperEnable (axes_signals_t enable)
 #endif
 }
 
+// Sets up stepper driver interrupt timeout, AMASS version
+static void stepperCyclesPerTick (uint32_t cycles_per_tick)
+{
+// Limit min steps/s to about 2 (hal.f_step_timer @ 20MHz)
+#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+    STEPPER_TIMER->COUNT32.CC[0].reg = cycles_per_tick < (1UL << 18) ? cycles_per_tick : (1UL << 18) - 1UL;
+#else
+    STEPPER_TIMER->COUNT32.CC[0].reg = cycles_per_tick < (1UL << 23) ? cycles_per_tick : (1UL << 23) - 1UL;
+#endif
+    while(STEPPER_TIMER->COUNT32.STATUS.bit.SYNCBUSY);
+}
+
 // Resets and enables stepper driver ISR timer and forces a stepper driver interrupt callback
 static void stepperWakeUp (void)
 {
@@ -197,7 +209,7 @@ static void stepperWakeUp (void)
     STEP_TIMER->COUNT16.CTRLA.reg |= TC_CTRLA_ENABLE;
     while(STEP_TIMER->COUNT16.STATUS.bit.SYNCBUSY);
 
-    hal.stepper.interrupt_callback();   // start the show
+    stepperCyclesPerTick(hal.f_step_timer / 500);   // start the show
 }
 
 // Disables stepper driver interrupts
@@ -210,18 +222,6 @@ static void stepperGoIdle (bool clear_signals)
         set_step_outputs((axes_signals_t){0});
         set_dir_outputs((axes_signals_t){0});
     }
-}
-
-// Sets up stepper driver interrupt timeout, AMASS version
-static void stepperCyclesPerTick (uint32_t cycles_per_tick)
-{
-// Limit min steps/s to about 2 (hal.f_step_timer @ 20MHz)
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    STEPPER_TIMER->COUNT32.CC[0].reg = cycles_per_tick < (1UL << 18) ? cycles_per_tick : (1UL << 18) - 1UL;
-#else
-    STEPPER_TIMER->COUNT32.CC[0].reg = cycles_per_tick < (1UL << 23) ? cycles_per_tick : (1UL << 23) - 1UL;
-#endif
-    while(STEPPER_TIMER->COUNT32.STATUS.bit.SYNCBUSY);
 }
 
 // Sets stepper direction and pulse pins and starts a step pulse
@@ -990,7 +990,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "230331";
+    hal.driver_version = "230511";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
