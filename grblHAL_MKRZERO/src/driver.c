@@ -265,9 +265,9 @@ static void stepperPulseStartDelayed (stepper_t *stepper)
 }
 
 // Enable/disable limit pins interrupt
-static void limitsEnable (bool on, bool homing)
+static void limitsEnable (bool on, axes_signals_t homing_cycle)
 {
-    on = on && settings.limits.flags.hard_enabled;
+    on = on && homing_cycle.mask == 0;
 
     if(on) {
         attachInterrupt(X_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.x ? FALLING : RISING);
@@ -278,16 +278,6 @@ static void limitsEnable (bool on, bool homing)
         detachInterrupt(Y_LIMIT_PIN);
         detachInterrupt(Z_LIMIT_PIN);
     }
-
-/*
-    if(on)
-        EIC->INTENSET.reg = lim_IRQMask;
-    else?
-        EIC->INTENCLR.reg = lim_IRQMask;
-*/
-#if TRINAMIC_ENABLE == 2130
-    trinamic_homing(homing);
-#endif
 }
 
 // Returns limit state as an axes_signals_t variable.
@@ -990,7 +980,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "230511";
+    hal.driver_version = "230828";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
