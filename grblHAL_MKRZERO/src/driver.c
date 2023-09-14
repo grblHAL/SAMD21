@@ -269,15 +269,20 @@ static void limitsEnable (bool on, axes_signals_t homing_cycle)
 {
     on = on && homing_cycle.mask == 0;
 
-    if(on) {
+    if(on && !homing_cycle.x)
         attachInterrupt(X_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.x ? FALLING : RISING);
-        attachInterrupt(Y_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.y ? FALLING : RISING);
-        attachInterrupt(Z_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.z ? FALLING : RISING);
-    } else {
+    else
         detachInterrupt(X_LIMIT_PIN);
+
+    if(on && !homing_cycle.y)
+        attachInterrupt(Y_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.y ? FALLING : RISING);
+    else
         detachInterrupt(Y_LIMIT_PIN);
+
+    if(on && !homing_cycle.z)
+        attachInterrupt(Z_LIMIT_PIN, LIMIT_IRQHandler, limit_ies.z ? FALLING : RISING);
+    else
         detachInterrupt(Z_LIMIT_PIN);
-    }
 }
 
 // Returns limit state as an axes_signals_t variable.
@@ -980,7 +985,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "230828";
+    hal.driver_version = "230907";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
