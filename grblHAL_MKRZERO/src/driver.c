@@ -985,7 +985,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "230907";
+    hal.driver_version = "230926";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1076,6 +1076,7 @@ bool driver_init (void) {
     hal.set_bits_atomic = bitsSetAtomic;
     hal.clear_bits_atomic = bitsClearAtomic;
     hal.set_value_atomic = valueSetAtomic;
+    hal.get_micros = micros;
     hal.get_elapsed_ticks = millis;
 
 #ifdef DEBUGOUT
