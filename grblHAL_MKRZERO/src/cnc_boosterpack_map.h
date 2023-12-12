@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2022 Terje Io
+  Copyright (c) 2020-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -68,10 +68,16 @@
 #define SAFETY_DOOR_PIN     (16u)
 #endif
 
-// Start of PWM & Stepper Enabled Spindle
+// Define driver spindle pins
+
+#if DRIVER_SPINDLE_PWM_ENABLE
 #define SPINDLE_PWM_TIMER   TCC0
 #define SPINDLE_PWM_CCREG   2
-#define SPINDLE_PWM_PIN       (6u)
+#define SPINDLE_PWM_PIN     (6u)
+#else
+#define AUXOUTPUT0_PORT
+#define AUXOUTPUT0_PIN      (6u)
+#endif
 
 // Define probe switch input pin.
 #define PROBE_PIN           (18u)

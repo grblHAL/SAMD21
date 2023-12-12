@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2022 Terje Io
+  Copyright (c) 2020-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -37,14 +37,27 @@
 #define Y_LIMIT_PIN             (1u)
 #define Z_LIMIT_PIN             (8u)
 
-// Define spindle enable and spindle direction output pins.
-#define SPINDLE_ENABLE_PIN      (7u)
-#define SPINDLE_DIRECTION_PIN   (15u)
+// Define driver spindle pins
 
-// Start of PWM & Stepper Enabled Spindle
+#if DRIVER_SPINDLE_PWM_ENABLE
 #define SPINDLE_PWM_TIMER       TCC0
 #define SPINDLE_PWM_CCREG       2
-#define SPINDLE_PWM_PIN           (6u)
+#define SPINDLE_PWM_PIN         (6u)
+#else
+#define AUXOUTPUT0_PIN          (6u)
+#endif
+
+#if DRIVER_SPINDLE_DIR_ENABLE
+#define SPINDLE_DIRECTION_PIN   (15u)
+#else
+#define AUXOUTPUT1_PIN          (15u)
+#endif
+
+#if DRIVER_SPINDLE_ENABLE
+#define SPINDLE_ENABLE_PIN      (7u)
+#else
+#define AUXOUTPUT2_PIN          (7u)
+#endif
 
 // Define flood and mist coolant enable output pins.
 #define COOLANT_FLOOD_PIN       (12u)

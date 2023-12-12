@@ -24,4 +24,10 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>FUCK</name>
+			<value>file:/C:/Users/terjeio/AppData/Local/Arduino15/packages/arduino/hardware</value>
+		</variable>
+	</variableList>
 </projectDescription>
