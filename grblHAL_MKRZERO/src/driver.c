@@ -190,7 +190,7 @@ static void stepperCyclesPerTick (uint32_t cycles_per_tick)
 // Resets and enables stepper driver ISR timer and forces a stepper driver interrupt callback
 static void stepperWakeUp (void)
 {
-    stepperEnable((axes_signals_t){AXES_BITMASK});
+    hal.stepper.enable((axes_signals_t){AXES_BITMASK});
 
     STEPPER_TIMER->COUNT32.COUNT.reg = 0;
     while(STEPPER_TIMER->COUNT32.STATUS.bit.SYNCBUSY);
@@ -991,7 +991,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "240330";
+    hal.driver_version = "240408";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
