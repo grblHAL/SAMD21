@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Some parts:
   Copyright (c) 2015 Arduino LLC.  All right reserved.
 
@@ -299,7 +299,7 @@ const io_stream_t *serialInit (void)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
-        .state.connected = true,
+        .is_connected = stream_connected,
         .read = serialGetC,
         .write = serialWriteS,
         .write_char = serialPutC,
