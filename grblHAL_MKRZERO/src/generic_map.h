@@ -39,24 +39,18 @@
 
 // Define driver spindle pins
 
-#if DRIVER_SPINDLE_PWM_ENABLE
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
 #define SPINDLE_PWM_TIMER       TCC0
 #define SPINDLE_PWM_CCREG       2
 #define SPINDLE_PWM_PIN         (6u)
-#else
-#define AUXOUTPUT0_PIN          (6u)
 #endif
 
-#if DRIVER_SPINDLE_DIR_ENABLE
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_DIR
 #define SPINDLE_DIRECTION_PIN   (15u)
-#else
-#define AUXOUTPUT1_PIN          (15u)
 #endif
 
-#if DRIVER_SPINDLE_ENABLE
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_ENA
 #define SPINDLE_ENABLE_PIN      (7u)
-#else
-#define AUXOUTPUT2_PIN          (7u)
 #endif
 
 // Define flood and mist coolant enable output pins.

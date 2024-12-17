@@ -81,7 +81,7 @@ static probe_state_t probe = {
 #if DRIVER_SPINDLE_ENABLE
 static spindle_id_t spindle_id = -1;
 #endif
-#if DRIVER_SPINDLE_PWM_ENABLE
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
 static bool pwmEnabled = false;
 static spindle_pwm_t spindle_pwm;
 #endif
@@ -402,7 +402,7 @@ static void spindleSetState (spindle_ptrs_t *spindle, spindle_state_t state, flo
 
 // Variable spindle control functions
 
-#if DRIVER_SPINDLE_PWM_ENABLE
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
 
 // Sets spindle speed
 static void spindleSetSpeed (spindle_ptrs_t *spindle, uint_fast16_t pwm_value)
@@ -499,7 +499,7 @@ bool spindleConfig (spindle_ptrs_t *spindle)
     return true;
 }
 
-#endif // DRIVER_SPINDLE_PWM_ENABLE
+#endif // SPINDLE_PWM
 
 // Returns spindle state in a spindle_state_t variable
 static spindle_state_t spindleGetState (spindle_ptrs_t *spindle)
@@ -610,7 +610,7 @@ void settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
     if(IOInitDone) {
 
-#if DRIVER_SPINDLE_PWM_ENABLE
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
         if(changed.spindle) {
             spindleConfig(spindle_get_hal(spindle_id, SpindleHAL_Configured));
             if(spindle_id == spindle_get_default())
@@ -991,7 +991,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "241208";
+    hal.driver_version = "241216";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1026,15 +1026,15 @@ bool driver_init (void) {
 
 #if DRIVER_SPINDLE_ENABLE
 
- #if DRIVER_SPINDLE_PWM_ENABLE
+ #if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
 
     static const spindle_ptrs_t spindle = {
         .type = SpindleType_PWM,
-#if DRIVER_SPINDLE_DIR_ENABLE
+  #if DRIVER_SPINDLE_ENABLE & SPINDLE_DIR
         .ref_id = SPINDLE_PWM0,
-#else
+  #else
         .ref_id = SPINDLE_PWM0_NODIR,
-#endif
+  #endif
         .config = spindleConfig,
         .set_state = spindleSetStateVariable,
         .get_state = spindleGetState,
@@ -1045,7 +1045,7 @@ bool driver_init (void) {
             .variable = On,
             .laser = On,
             .pwm_invert = On,
-  #if DRIVER_SPINDLE_DIR_ENABLE
+  #if DRIVER_SPINDLE_ENABLE & SPINDLE_DIR
             .direction = On
   #endif
         }
@@ -1055,16 +1055,16 @@ bool driver_init (void) {
 
     static const spindle_ptrs_t spindle = {
         .type = SpindleType_Basic,
-#if DRIVER_SPINDLE_DIR_ENABLE
+  #if DRIVER_SPINDLE_ENABLE & SPINDLE_DIR
         .ref_id = SPINDLE_ONOFF0_DIR,
-#else
+  #else
         .ref_id = SPINDLE_ONOFF0,
-#endif
+  #endif
         .set_state = spindleSetState,
         .get_state = spindleGetState,
         .cap = {
             .gpio_controlled = On,
-  #if DRIVER_SPINDLE_DIR_ENABLE
+  #if DRIVER_SPINDLE_ENABLE & SPINDLE_DIR
             .direction = On
   #endif
         }
