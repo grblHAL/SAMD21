@@ -5,25 +5,25 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2025 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.h"
 
-#ifdef I2C_PORT
+#if I2C_ENABLE
 
 #include <Arduino.h>
 
@@ -76,8 +76,13 @@ static void I2C_interrupt_handler (void);
 
 #define WIRE_RISE_TIME_NANOSECONDS 125
 
+bool i2c_probe (i2c_address_t i2c_address)
+{
+    return true;
+}
+
 // get bytes (max 8), waits for result
-uint8_t *I2C_Receive (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block)
+bool i2c_receive (i2c_address_t i2cAddr, uint8_t *buf, size_t bytes, bool block)
 {
     i2c.data  = buf ? buf : i2c.buffer;
     i2c.count = bytes;
@@ -90,10 +95,10 @@ uint8_t *I2C_Receive (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block
     if(block)
         while(i2cIsBusy);
 
-    return i2c.buffer;
+    return true;
 }
 
-bool i2c_send (uint_fast16_t i2cAddr, uint8_t *buf, size_t bytes, bool block)
+bool i2c_send (i2c_address_t i2cAddr, uint8_t *buf, size_t bytes, bool block)
 {
 //    while(i2cIsBusy);
 
@@ -110,7 +115,7 @@ bool i2c_send (uint_fast16_t i2cAddr, uint8_t *buf, size_t bytes, bool block)
     return true;
 }
 
-uint8_t *I2C_ReadRegister (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block)
+uint8_t *I2C_ReadRegister (i2c_address_t i2cAddr, uint8_t *buf, uint16_t bytes, bool block)
 {
     while(i2cIsBusy);
 
@@ -127,38 +132,33 @@ uint8_t *I2C_ReadRegister (uint32_t i2cAddr, uint8_t *buf, uint16_t bytes, bool 
     return i2c.buffer;
 }
 
-#if EEPROM_ENABLE
-
-nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *transfer, bool read)
+bool i2c_nvs_transfer (i2c_transfer_t *transfer, bool read)
 {
-    static uint8_t txbuf[34];
+    static uint8_t txbuf[66];
+
+    bool ok;
 
     while(i2cIsBusy);
 
-    if(read) {
+    if((ok = read)) {
         transfer->data[0] = transfer->word_addr; // !!
         I2C_ReadRegister(transfer->address, transfer->data, transfer->count, true);
-    } else {
+    } else if((ok = transfer->count <= 64)) {
         memcpy(&txbuf[1], transfer->data, transfer->count);
         txbuf[0] = transfer->word_addr;
-        i2c_send(transfer->address, txbuf, transfer->count + 1, true);
-#if !EEPROM_IS_FRAM
-        hal.delay_ms(5, NULL);
-#endif
+        i2c_send(transfer->address, txbuf, transfer->count + 1, !transfer->no_block);
     }
 
-    return NVS_TransferResult_OK;
+    return ok;
 }
 
-#endif
-
-void i2c_get_keycode (uint_fast16_t i2cAddr, keycode_callback_ptr callback)
+bool i2c_get_keycode (i2c_address_t i2cAddr, keycode_callback_ptr callback)
 {
     while(i2cIsBusy);
 
     i2c.keycode_callback = callback;
 
-    I2C_Receive(i2cAddr, NULL, 1, false);
+    return i2c_receive(i2cAddr, NULL, 1, false);
 }
 
 #if TRINAMIC_ENABLE && TRINAMIC_I2C
@@ -225,13 +225,11 @@ TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *dat
 
 #endif
 
-void i2c_init (void)
+i2c_cap_t i2c_start (void)
 {
-    static bool init_ok = false;
+    static i2c_cap_t cap = {};
 
-    if(!init_ok) {
-
-        init_ok = true;
+    if(!cap.started) {
 
         pinPeripheral(I2C_SDA_PIN, g_APinDescription[I2C_SDA_PIN].ulPinType); // PIO_SERCOM
         pinPeripheral(I2C_SCL_PIN, g_APinDescription[I2C_SCL_PIN].ulPinType);
@@ -267,7 +265,11 @@ void i2c_init (void)
         // Setting bus idle mode
         i2c_port->I2CM.STATUS.bit.BUSSTATE = 1;
         while(i2c_port->I2CM.SYNCBUSY.bit.SYSOP);
+
+        cap.started = cap.tx_non_blocking = On;
     }
+
+    return cap;
 }
 
 static void I2C_interrupt_handler (void)

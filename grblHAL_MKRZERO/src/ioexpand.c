@@ -38,7 +38,7 @@
 
 void ioexpand_init (void)
 {
-    i2c_init();
+    i2c_start();
 
     uint8_t cmd[2];
 

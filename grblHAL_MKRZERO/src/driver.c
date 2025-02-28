@@ -4,20 +4,20 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2023 Terje Io
+  Copyright (c) 2018-2025 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -991,7 +991,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "241216";
+    hal.driver_version = "240228";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
@@ -1080,10 +1080,6 @@ bool driver_init (void) {
     stream_connect(usbInit());
 #else
     stream_connect(serialInit());
-#endif
-
-#if I2C_ENABLE
-    i2c_init();
 #endif
 
 #if EEPROM_ENABLE
