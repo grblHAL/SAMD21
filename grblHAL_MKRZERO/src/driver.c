@@ -219,11 +219,13 @@ static void stepperGoIdle (bool clear_signals)
 // Sets stepper direction and pulse pins and starts a step pulse
 static void stepperPulseStart (stepper_t *stepper)
 {
-    if(stepper->dir_change)
-        set_dir_outputs(stepper->dir_outbits);
+    if(stepper->dir_changed.bits) {
+        stepper->dir_changed.bits = 0;
+        set_dir_outputs(stepper->dir_out);
+    }
 
-    if(stepper->step_outbits.value) {
-        set_step_outputs(stepper->step_outbits);
+    if(stepper->step_out.bits) {
+        set_step_outputs(stepper->step_out);
         STEP_TIMER->COUNT16.CTRLBSET.reg = TC_CTRLBCLR_CMD_RETRIGGER|TCC_CTRLBSET_ONESHOT;
     }
 }
@@ -232,15 +234,16 @@ static void stepperPulseStart (stepper_t *stepper)
 // Note: delay is only added when there is a direction change and a pulse to be output.
 static void stepperPulseStartDelayed (stepper_t *stepper)
 {
-    if(stepper->dir_change) {
+    if(stepper->dir_changed.bits) {
 
-        set_dir_outputs(stepper->dir_outbits);
+        stepper->dir_changed.bits = 0;
+        set_dir_outputs(stepper->dir_out);
 
-        if(stepper->step_outbits.value) {
+        if(stepper->step_out.bits) {
 
             IRQRegister(STEP_TIMER_IRQn, STEPPULSE_Delayed_IRQHandler);
 
-            next_step_outbits = stepper->step_outbits; // Store out_bits
+            next_step_outbits = stepper->step_out; // Store out_bits
 
             STEP_TIMER->COUNT16.CC[0].reg = pulse_delay;
             while(STEP_TIMER->COUNT16.STATUS.bit.SYNCBUSY);
@@ -250,8 +253,8 @@ static void stepperPulseStartDelayed (stepper_t *stepper)
         return;
     }
 
-    if(stepper->step_outbits.value) {
-        set_step_outputs(stepper->step_outbits);
+    if(stepper->step_out.bits) {
+        set_step_outputs(stepper->step_out.bits);
         STEP_TIMER->COUNT16.CTRLBSET.reg = TC_CTRLBCLR_CMD_RETRIGGER|TCC_CTRLBSET_ONESHOT;
     }
 }
@@ -991,7 +994,7 @@ bool driver_init (void) {
     IRQRegister(SysTick_IRQn, SysTick_IRQHandler);
 
     hal.info = "SAMD21";
-    hal.driver_version = "240228";
+    hal.driver_version = "240327";
     hal.driver_url = GRBL_URL "/SAMD21";
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
