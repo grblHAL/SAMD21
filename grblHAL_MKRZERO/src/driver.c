@@ -351,7 +351,9 @@ static probe_state_t probeGetState (void)
 
 inline static void spindle_off (spindle_ptrs_t *spindle)
 {
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
     spindle->context.pwm->flags.enable_out = Off;
+#endif
 #if IOEXPAND_ENABLE
     bool on = settings.pwm_spindle.invert.on ? On : Off;
     if(iopins.spindle_on != on) {
@@ -365,7 +367,9 @@ inline static void spindle_off (spindle_ptrs_t *spindle)
 
 inline static void spindle_on (spindle_ptrs_t *spindle)
 {
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
     spindle->context.pwm->flags.enable_out = On;
+#endif
 #if IOEXPAND_ENABLE
     bool on = settings.pwm_spindle.invert.on ? Off : On;
     if(iopins.spindle_on != on) {
