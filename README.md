@@ -1,5 +1,8 @@
 ## SAMD21 Driver
 
+> [!NOTE]
+> 2025-05-29: End of support notice. This driver will no longer be updated, the latest core build it can be used with is 20250518.
+
 __IMPORTANT:__ Arduino version 1.8.11 has breaking changes in the library code that causes compilation to fail. Use an earlier version or select another driver for your project.  
 See [issue #224](https://github.com/terjeio/grblHAL/issues/224) for more information. Also note that I am __*not*__ going to make a workaround for this since the compilation error is in the shared grblHAL core code.
 
@@ -69,4 +72,4 @@ Numbers in round brackets are the Arduino pin assignments, in square brackets th
 **NOTE:** Only tested on my bench with an oscilloscope, some switches and LEDs.
 
 ---
-2021-04-14
+2025-05-29
